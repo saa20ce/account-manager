@@ -1,0 +1,13 @@
+USE accs_manager;
+
+CREATE TABLE IF NOT EXISTS account (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    company_name VARCHAR(255) DEFAULT NULL,
+    position VARCHAR(255) DEFAULT NULL,
+    phone1 VARCHAR(20) DEFAULT NULL,
+    phone2 VARCHAR(20) DEFAULT NULL,
+    phone3 VARCHAR(20) DEFAULT NULL
+);

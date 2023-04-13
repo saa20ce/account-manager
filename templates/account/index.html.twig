@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Account manager{% endblock %}
+
+{% block body %}
+    <a href="{{ path('account_new') }}">Add new account</a>
+    {% if accounts is not empty %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Email</th>
+                <th>Company Name</th>
+                <th>Position</th>
+                <th>Phone 1</th>
+                <th>Phone 2</th>
+                <th>Phone 3</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for account in accounts %}
+            <tr>
+                <td>{{ account.id }}</td>
+                <td>{{ account.firstName }}</td>
+                <td>{{ account.lastName }}</td>
+                <td>{{ account.email }}</td>
+                <td>{{ account.companyName }}</td>
+                <td>{{ account.position }}</td>
+                <td>{{ account.phone1 }}</td>
+                <td>{{ account.phone2 }}</td>
+                <td>{{ account.phone3 }}</td>
+                <td>
+                    <a href="{{ path('account_edit', {'id': account.id}) }}">Edit</a>
+            <form class="delete-form" method="POST" action="{{ path('account_delete', {'id': account.id}) }}">
+                <button type="submit" class="delete-button">Delete</button>
+            </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    {% if haveToPaginate and accounts is not empty %}
+        <div class="pagination-container">
+            {{ knp_pagination_render(accounts) }}
+        </div>
+    {% endif %}
+
+
+{% else %}
+    <p>{{ 'No accounts found.'|trans }}</p>
+{% endif %}
+{% endblock %}
