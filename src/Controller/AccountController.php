@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Account;
 use App\Form\AccountType;
 use App\Repository\AccountRepository;
+use App\Service\AccountService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,13 +24,12 @@ class AccountController extends AbstractController
     /**
      * @Route("/", name="account_index", methods={"GET"})
      */
-    public function index(AccountRepository $accountRepository, Request $request, PaginatorInterface $paginator): Response
+    public function index(Request $request, AccountService $accountService): Response
     {
-        $query = $accountRepository->createQueryBuilder('a')->getQuery();
         $page = $request->query->getInt('page', 1);
         $limit = 10;
     
-        $accounts = $paginator->paginate($query, $page, $limit, ['pageParameterName' => 'page']);
+        $accounts = $accountService->getPaginatedAccounts($page, $limit);
         $haveToPaginate = $accounts->getTotalItemCount() > $accounts->getItemNumberPerPage();
 
         return $this->render('account/index.html.twig', [
@@ -42,15 +42,14 @@ class AccountController extends AbstractController
     /**
      * @Route("/new", name="account_new", methods={"GET","POST"})
      */
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, AccountService $accountService): Response
     {
         $account = new Account();
         $form = $this->createForm(AccountType::class, $account);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($account);
-            $entityManager->flush();
+            $accountService->createAccount($account);
 
             return $this->redirectToRoute('account_index');
         }
@@ -60,14 +59,13 @@ class AccountController extends AbstractController
             'form' => $form->createView(),
         ]);
     }
-
     /* To edit account */
     /**
      * @Route("/{id}/edit", name="account_edit", methods={"GET","POST"}, requirements={"id"="\d+"})
      */
-    public function edit(int $id, Request $request, AccountRepository $accountRepository, EntityManagerInterface $entityManager): Response
+    public function edit(int $id, Request $request, AccountService $accountService): Response
     {
-        $account = $accountRepository->find($id);
+        $account = $accountService->find($id);
 
         if (!$account) {
             throw $this->createNotFoundException('Account not found');
@@ -77,7 +75,7 @@ class AccountController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->flush();
+            $accountService->updateAccount();
 
             return $this->redirectToRoute('account_index');
         }
@@ -92,13 +90,12 @@ class AccountController extends AbstractController
     /**
      * @Route("/{id}", name="account_delete", methods={"POST"})
      */
-    public function delete(int $id, EntityManagerInterface $entityManager): Response
+    public function delete(int $id, AccountService $accountService): Response
     {
-        $account = $entityManager->getRepository(Account::class)->find($id);
+        $account = $accountService->find($id);
 
         if ($account) {
-            $entityManager->remove($account);
-            $entityManager->flush();
+            $accountService->deleteAccount($account);
         }
 
         return $this->redirectToRoute('account_index');
