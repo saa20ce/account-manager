@@ -2,25 +2,20 @@
 
 namespace App\Controller;
 
-use App\Entity\Account;
+use App\DTO\AccountDTO;
 use App\Form\AccountType;
-use App\Repository\AccountRepository;
 use App\Service\AccountService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Doctrine\ORM\EntityManagerInterface;
-use Knp\Component\Pager\PaginatorInterface;
-
+use Symfony\Component\Form\FormError;
 
 /**
  * @Route("/account")
  */
 class AccountController extends AbstractController
 {
-
-    /* To display a list of accounts with paginated navigation */
     /**
      * @Route("/", name="account_index", methods={"GET"})
      */
@@ -28,7 +23,7 @@ class AccountController extends AbstractController
     {
         $page = $request->query->getInt('page', 1);
         $limit = 10;
-    
+
         $accounts = $accountService->getPaginatedAccounts($page, $limit);
         $haveToPaginate = $accounts->getTotalItemCount() > $accounts->getItemNumberPerPage();
 
@@ -38,28 +33,33 @@ class AccountController extends AbstractController
         ]);
     }
 
-    /* To create new account */
     /**
      * @Route("/new", name="account_new", methods={"GET","POST"})
      */
+
     public function new(Request $request, AccountService $accountService): Response
     {
-        $account = new Account();
-        $form = $this->createForm(AccountType::class, $account);
+        $accountDto = new AccountDTO();
+        $form = $this->createForm(AccountType::class, $accountDto);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $accountService->createAccount($account);
+            // Check mail unique
+            if (!$accountService->isEmailUnique($accountDto->email)) {
+                $form->get('email')->addError(new FormError('This email address is already in use.'));
+            } else {
+                $account = $accountService->createAccount($accountDto);
 
-            return $this->redirectToRoute('account_index');
+                return $this->redirectToRoute('account_index');
+            }
         }
 
         return $this->render('account/new.html.twig', [
-            'account' => $account,
+            'account' => $accountDto,
             'form' => $form->createView(),
         ]);
     }
-    /* To edit account */
+
     /**
      * @Route("/{id}/edit", name="account_edit", methods={"GET","POST"}, requirements={"id"="\d+"})
      */
@@ -71,13 +71,19 @@ class AccountController extends AbstractController
             throw $this->createNotFoundException('Account not found');
         }
 
-        $form = $this->createForm(AccountType::class, $account);
+        $accountDTO = AccountDTO::createFromEntity($account);
+        $form = $this->createForm(AccountType::class, $accountDTO);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $accountService->updateAccount();
-
-            return $this->redirectToRoute('account_index');
+            // Проверка уникальности email
+            $existingAccount = $accountService->findOneByEmail($accountDTO->email);
+            if ($existingAccount && $existingAccount->getId() !== $id) {
+                $form->get('email')->addError(new FormError('This email is already in use.'));
+            } else {
+                $accountService->updateAccount($account, $accountDTO);
+                return $this->redirectToRoute('account_index');
+            }
         }
 
         return $this->render('account/edit.html.twig', [
@@ -86,7 +92,6 @@ class AccountController extends AbstractController
         ]);
     }
 
-    /* To delete account */
     /**
      * @Route("/{id}", name="account_delete", methods={"POST"})
      */
@@ -100,6 +105,4 @@ class AccountController extends AbstractController
 
         return $this->redirectToRoute('account_index');
     }
-
-
 }
